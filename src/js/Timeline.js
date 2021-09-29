@@ -1,4 +1,6 @@
 /* eslint-disable linebreak-style */
+/* eslint-disable no-param-reassign */
+/* eslint-disable linebreak-style */
 /* eslint-disable no-console */
 /* eslint-disable linebreak-style */
 /* eslint-disable import/no-unresolved */
@@ -6,18 +8,17 @@
 /* eslint-disable linebreak-style */
 /* eslint-disable eol-last */
 import Modal from './Madal';
+import getGeoposition from './geoposition';
 
 function getDate() {
   let date = new Date();
   date = date.toLocaleString('ru');
-  date = date.substr(0, 17).replace(',', '');
   return date;
 }
 
 export default class Timeline {
   constructor(elem) {
     if (typeof elem === 'string') {
-      // eslint-disable-next-line no-param-reassign
       elem = document.querySelector(elem);
     }
     this.element = elem;
@@ -38,39 +39,32 @@ export default class Timeline {
   }
 
   init() {
-    this.geo();
-    this.textArea.addEventListener('keydown', this.onCreatePost);
-  }
-
-  geo() {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          this.latitude = position.coords.latitude;
-          this.longitude = position.coords.longitude;
-        },
-        (error) => {
-          console.log(`определить позицию не удалось. Ошибка: ${error}`);
-        },
-      );
-    }
+    this.textArea.addEventListener('keydown', (event) => this.onCreatePost(event));
   }
 
   onCreatePost(event) {
     this.text = this.textArea.value.trim();
     if (event.key === 'Enter' && this.text) {
       event.preventDefault();
-      this.textArea.value = '';
-      if (!this.latitude) {
-        this.modal.showModal();
-        return;
+      if (event.currentTarget.value === '') {
+        this.showMistake(event.currentTarget, 'Необходимо заполнить поле');
+      } else {
+        getGeoposition()
+          .then((data) => {
+            const { latitude, longitude } = data;
+            this.latitude = latitude;
+            this.longitude = longitude;
+            const post = this.markupОfThePost(this.text);
+            this.feed.insertBefore(post, this.feed.firstElementChild);
+          })
+          .catch(() => {
+            this.modal.showModal();
+          });
       }
-      this.createTextPost();
     }
   }
 
   createTextPost() {
-    this.geo();
     const post = this.markupОfThePost(this.text);
     this.feed.insertBefore(post, this.feed.firstElementChild);
   }
